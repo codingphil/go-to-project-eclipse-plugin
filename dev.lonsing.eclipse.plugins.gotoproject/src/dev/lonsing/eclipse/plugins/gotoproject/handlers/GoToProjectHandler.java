@@ -14,6 +14,7 @@ import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IPageLayout;
+import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IViewReference;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.handlers.HandlerUtil;
@@ -28,10 +29,10 @@ public class GoToProjectHandler extends AbstractHandler {
   public Object execute(ExecutionEvent event) throws ExecutionException {
     IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
 
-    var selectionDialog = new GoToProjectSelectionDialog(window.getShell());
+    GoToProjectSelectionDialog selectionDialog = new GoToProjectSelectionDialog(window.getShell());
     if (selectionDialog.open() == IDialogConstants.OK_ID) {
-      var selectedProject = selectionDialog.getSelectedProject();
-      var viewRefs = window.getActivePage().getViewReferences();
+      IProject selectedProject = selectionDialog.getSelectedProject();
+      IViewReference[] viewRefs = window.getActivePage().getViewReferences();
       selectProjectInView(selectedProject, IPageLayout.ID_PROJECT_EXPLORER, viewRefs);
       IJavaProject selectedJavaProject = projectToJavaProject(selectedProject);
       selectProjectInView(selectedJavaProject != null ? selectedJavaProject : selectedProject, JavaUI.ID_PACKAGES,
@@ -43,7 +44,7 @@ public class GoToProjectHandler extends AbstractHandler {
   private void selectProjectInView(Object selectedProject, String viewId, IViewReference[] viewRefs) {
     Optional<IViewReference> projectViewRef = Arrays.stream(viewRefs).filter(v -> v.getId().equals(viewId)).findAny();
     if (projectViewRef.isPresent()) {
-      var projectViewPart = projectViewRef.get().getView(false);
+      IViewPart projectViewPart = projectViewRef.get().getView(false);
       if (projectViewPart != null && projectViewPart.getViewSite() != null) {
         projectViewPart.getViewSite().getSelectionProvider().setSelection(new StructuredSelection(selectedProject));
       }

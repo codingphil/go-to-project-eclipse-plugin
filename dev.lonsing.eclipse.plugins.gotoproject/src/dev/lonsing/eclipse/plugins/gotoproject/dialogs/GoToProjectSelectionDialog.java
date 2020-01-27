@@ -28,7 +28,8 @@ public class GoToProjectSelectionDialog extends FilteredItemsSelectionDialog {
 
     @Override
     public boolean matchItem(Object item) {
-      if (this.getPattern().isBlank()) {
+      String pattern = this.getPattern();
+      if (pattern == null || pattern.trim().isEmpty()) {
         return true;
       }
       String projectName = ((IProject) item).getName();
@@ -88,7 +89,7 @@ public class GoToProjectSelectionDialog extends FilteredItemsSelectionDialog {
   @Override
   protected void fillContentProvider(AbstractContentProvider contentProvider, ItemsFilter itemsFilter,
       IProgressMonitor progressMonitor) throws CoreException {
-    for (var project : allProjects) {
+    for (IProject project : allProjects) {
       contentProvider.add(project, itemsFilter);
     }
   }
