@@ -5,15 +5,16 @@
       version="1.0.0.qualifier"
       provider-name="Philip Lonsing">
 
-   <description url="http://www.example.com/description">
-      Eclipse plugin which allows the user to navigate to a specific project in the project view or the package explorer.
+   <description url="https://codingphil.github.io/go-to-project-eclipse-plugin/">
+      Eclipse plugin which allows the user to navigate to a specific
+project in the project view or the package explorer.
    </description>
 
-   <copyright url="http://www.example.com/copyright">
+   <copyright url="https://codingphil.github.io/go-to-project-eclipse-plugin/LICENSE">
       Copyright (c) 2020 Philip Lonsing
    </copyright>
 
-   <license url="http://www.example.com/license">
+   <license url="https://codingphil.github.io/go-to-project-eclipse-plugin/LICENSE">
       MIT License
 
 Copyright (c) 2020 Philip Lonsing
