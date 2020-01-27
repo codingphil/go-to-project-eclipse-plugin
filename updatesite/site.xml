@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/dev.lonsing.eclipse.plugins.gotoproject.feature_1.0.0.202001272213.jar" id="dev.lonsing.eclipse.plugins.gotoproject.feature" version="1.0.0.202001272213">
+      <category name="dev.lonsing.eclipse.plugins.gotoproject"/>
+   </feature>
+   <category-def name="dev.lonsing.eclipse.plugins.gotoproject" label="Go to Project">
+      <description>
+         Eclipse plugin which allows the user to navigate to a specific
+project in the project view or the package explorer.
+      </description>
+   </category-def>
+</site>
