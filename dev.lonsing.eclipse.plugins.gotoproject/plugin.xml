@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="dev.lonsing.eclipse.plugins.gotoproject.handlers.GoToProjectHandler"
+            commandId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+            name="Go to Project">
+      </category>
+      <command
+            categoryId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+            id="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+            name="Project...">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M3+P">
+      </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:goTo?after=additions">
+        <command
+              commandId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+              id="dev.lonsing.eclipse.plugins.gotoproject.menus.gotoproject"
+              mnemonic="P">
+        </command>
+      </menuContribution>
+   </extension>
+
+</plugin>
