@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: %Bundle-Name
 Bundle-SymbolicName: dev.lonsing.eclipse.plugins.gotoproject;singleton:=true
-Bundle-Version: 1.0.1.qualifier
+Bundle-Version: 1.0.2.qualifier
 Bundle-Activator: dev.lonsing.eclipse.plugins.gotoproject.GoToProjectPlugin
 Bundle-Vendor: %Bundle-Vendor
 Automatic-Module-Name: dev.lonsing.eclipse.plugins.gotoproject
