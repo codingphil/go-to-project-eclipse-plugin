@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/dev.lonsing.eclipse.plugins.gotoproject.feature_1.0.0.202001282224.jar" id="dev.lonsing.eclipse.plugins.gotoproject.feature" version="1.0.0.202001282224">
+   <feature url="features/dev.lonsing.eclipse.plugins.gotoproject.feature_1.0.0.202003182309.jar" id="dev.lonsing.eclipse.plugins.gotoproject.feature" version="1.0.0.202003182309">
       <category name="dev.lonsing.eclipse.plugins.gotoproject"/>
    </feature>
    <category-def name="dev.lonsing.eclipse.plugins.gotoproject" label="Go to Project">
