@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>dev.lonsing.eclipse.plugins</groupId>
+  <artifactId>dev.lonsing.eclipse.plugins.gotoproject.parent</artifactId>
+  <version>1.0.3-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Go to Project - Parent</name>
+
+  <properties>
+    <tycho.version>5.0.3</tycho.version>
+    <target-platform.version>1.0.3-SNAPSHOT</target-platform.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <project.build.outputTimestamp>2026-08-18T00:00:00Z</project.build.outputTimestamp>
+  </properties>
+
+  <modules>
+    <module>target-platform</module>
+    <module>dev.lonsing.eclipse.plugins.gotoproject</module>
+    <module>dev.lonsing.eclipse.plugins.gotoproject.feature</module>
+    <module>repository</module>
+  </modules>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-maven-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <extensions>true</extensions>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>target-platform-configuration</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <target>
+            <artifact>
+              <groupId>dev.lonsing.eclipse.plugins</groupId>
+              <artifactId>dev.lonsing.eclipse.plugins.gotoproject.target-platform</artifactId>
+              <version>${target-platform.version}</version>
+            </artifact>
+          </target>
+          <targetDefinitionIncludeSource>honor</targetDefinitionIncludeSource>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-compiler-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <useProjectSettings>true</useProjectSettings>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <showWarnings>true</showWarnings>
+          <showDeprecation>true</showDeprecation>
+          <failOnWarning>false</failOnWarning>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-packaging-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.eclipse.tycho</groupId>
+            <artifactId>tycho-buildtimestamp-jgit</artifactId>
+            <version>${tycho.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <timestampProvider>jgit</timestampProvider>
+          <jgit.dirtyWorkingTree>warning</jgit.dirtyWorkingTree>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-build-toolchain</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>[3.9.16]</version>
+                </requireMavenVersion>
+                <requireJavaVersion>
+                  <version>[21,22)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.lonsing.eclipse.plugins</groupId>
+    <artifactId>dev.lonsing.eclipse.plugins.gotoproject.parent</artifactId>
+    <version>1.0.3-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>dev.lonsing.eclipse.plugins.gotoproject.repository</artifactId>
+  <packaging>eclipse-repository</packaging>
+
+  <name>Go to Project - p2 Repository</name>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-p2-repository-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <executions>
+          <execution>
+            <id>verify-p2-repository</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>verify-repository</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <compress>true</compress>
+          <xzCompress>true</xzCompress>
+          <keepNonXzIndexFiles>true</keepNonXzIndexFiles>
+          <includeAllDependencies>false</includeAllDependencies>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
