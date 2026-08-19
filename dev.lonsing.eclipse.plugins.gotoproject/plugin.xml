@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?eclipse version="3.4"?>
 <plugin>
    <extension
          point="org.eclipse.ui.handlers">
@@ -12,12 +11,12 @@
          point="org.eclipse.ui.commands">
       <category
             id="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
-            name="Go to Project">
+            name="%command_category_name">
       </category>
       <command
             categoryId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
             id="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
-            name="Project...">
+            name="%command_goToProject_name">
       </command>
    </extension>
    <extension

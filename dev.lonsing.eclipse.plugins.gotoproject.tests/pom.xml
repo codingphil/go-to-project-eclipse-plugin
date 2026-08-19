@@ -11,31 +11,23 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>dev.lonsing.eclipse.plugins.gotoproject.repository</artifactId>
-  <packaging>eclipse-repository</packaging>
+  <artifactId>dev.lonsing.eclipse.plugins.gotoproject.tests</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+  <packaging>eclipse-test-plugin</packaging>
 
-  <name>Go to Project - p2 Repository</name>
+  <name>Go to Project - Tests</name>
 
   <build>
     <plugins>
       <plugin>
         <groupId>org.eclipse.tycho</groupId>
-        <artifactId>tycho-p2-repository-plugin</artifactId>
+        <artifactId>tycho-surefire-plugin</artifactId>
         <version>${tycho.version}</version>
-        <executions>
-          <execution>
-            <id>verify-p2-repository</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>verify-repository</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
-          <compress>true</compress>
-          <xzCompress>true</xzCompress>
-          <keepNonXzIndexFiles>true</keepNonXzIndexFiles>
-          <includeAllDependencies>false</includeAllDependencies>
+          <providerHint>junit5</providerHint>
+          <enableAssertions>true</enableAssertions>
+          <failIfNoTests>true</failIfNoTests>
+          <useUIHarness>false</useUIHarness>
         </configuration>
       </plugin>
     </plugins>
