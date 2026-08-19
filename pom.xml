@@ -23,6 +23,7 @@
     <module>target-platform</module>
     <module>dev.lonsing.eclipse.plugins.gotoproject</module>
     <module>dev.lonsing.eclipse.plugins.gotoproject.tests</module>
+    <module>dev.lonsing.eclipse.plugins.gotoproject.ui.tests</module>
     <module>dev.lonsing.eclipse.plugins.gotoproject.feature</module>
     <module>repository</module>
   </modules>

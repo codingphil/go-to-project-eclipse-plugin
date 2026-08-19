@@ -27,4 +27,20 @@ jobs:
         shell: bash
         run: |
           chmod +x mvnw
-          ./mvnw --batch-mode --no-transfer-progress clean verify
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" ./mvnw --batch-mode --no-transfer-progress clean verify
+      - name: Upload headless test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: headless-surefire-reports
+          path: dev.lonsing.eclipse.plugins.gotoproject.tests/target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Upload UI test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-surefire-reports
+          path: dev.lonsing.eclipse.plugins.gotoproject.ui.tests/target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 30

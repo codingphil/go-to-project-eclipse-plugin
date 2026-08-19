@@ -1,6 +1,6 @@
 package dev.lonsing.eclipse.plugins.gotoproject.dialogs;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -43,13 +43,17 @@ public class GoToProjectSelectionDialog extends FilteredItemsSelectionDialog {
   }
 
   public GoToProjectSelectionDialog(Shell shell) {
+    this(shell, getAllProjectsOfWorkspace());
+  }
+
+  GoToProjectSelectionDialog(Shell shell, List<IProject> projects) {
     super(shell, false);
     this.setTitle(Messages.GoToProjectSelectionDialog_SelectProjectDialogTitle);
     this.setMessage(Messages.GoToProjectSelectionDialog_SelectProjectDialogMessage);
     this.setListLabelProvider(new WorkbenchLabelProvider());
     this.setDetailsLabelProvider(new WorkbenchLabelProvider());
-    allProjects = getAllProjectsOfWorkspace();
-    allProjects.sort(new ProjectComparator());
+    allProjects = new ArrayList<>(projects);
+    allProjects.sort(itemsComparator);
   }
 
   public IProject getSelectedProject() {
@@ -95,6 +99,6 @@ public class GoToProjectSelectionDialog extends FilteredItemsSelectionDialog {
   }
 
   private static List<IProject> getAllProjectsOfWorkspace() {
-    return Arrays.asList(ResourcesPlugin.getWorkspace().getRoot().getProjects());
+    return List.of(ResourcesPlugin.getWorkspace().getRoot().getProjects());
   }
 }
