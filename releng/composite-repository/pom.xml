@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>dev.lonsing.eclipse.plugins</groupId>
+    <artifactId>dev.lonsing.eclipse.plugins.gotoproject.parent</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>dev.lonsing.eclipse.plugins.gotoproject.composite-repository</artifactId>
+  <packaging>pom</packaging>
+
+  <name>Go to Project - Composite p2 Repository</name>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-eclipse-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <executions>
+          <execution>
+            <id>assemble-and-verify-composite-repository</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>eclipse-run</goal>
+            </goals>
+            <configuration>
+              <executionEnvironment>JavaSE-21</executionEnvironment>
+              <work>${project.build.directory}/eclipse-run</work>
+              <repositories>
+                <repository>
+                  <id>eclipse-2026-06</id>
+                  <layout>p2</layout>
+                  <url>https://download.eclipse.org/releases/2026-06/</url>
+                </repository>
+              </repositories>
+              <dependencies>
+                <dependency>
+                  <artifactId>org.apache.ant</artifactId>
+                  <version>1.10.17.v20260410-1000</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.ant.core</artifactId>
+                  <version>3.7.900.v20260427-0433</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.p2.repository.tools</artifactId>
+                  <version>2.4.1000.v20260304-1232</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.p2.director.app</artifactId>
+                  <version>1.3.1000.v20260305-0817</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.p2.transport.ecf</artifactId>
+                  <version>1.4.700.v20260304-0651</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.p2.touchpoint.eclipse</artifactId>
+                  <version>2.4.600.v20250722-0413</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.p2.touchpoint.natives</artifactId>
+                  <version>1.5.900.v20260304-0711</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.frameworkadmin</artifactId>
+                  <version>2.3.600.v20260306-0554</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.frameworkadmin.equinox</artifactId>
+                  <version>1.3.400.v20250515-0513</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.simpleconfigurator</artifactId>
+                  <version>1.5.700.v20251111-1031</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.equinox.simpleconfigurator.manipulator</artifactId>
+                  <version>2.3.700.v20260306-0556</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+                <dependency>
+                  <artifactId>org.eclipse.osgi.compatibility.state</artifactId>
+                  <version>1.3.0.v20251022-1724</version>
+                  <type>eclipse-plugin</type>
+                </dependency>
+              </dependencies>
+              <applicationArgs>
+                <arg>-application</arg>
+                <arg>org.eclipse.ant.core.antRunner</arg>
+                <arg>-buildfile</arg>
+                <arg>${project.basedir}/composite.xml</arg>
+                <arg>-DlegacyRepository=${legacyRepository}</arg>
+                <arg>-DcurrentRepository=${project.basedir}/../../repository/target/repository</arg>
+                <arg>-DoutputRepository=${project.build.directory}/updatesite</arg>
+                <arg>-DreleaseVersion=${releaseVersion}</arg>
+              </applicationArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>require-composite-output</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <available file="${project.build.directory}/updatesite/compositeContent.jar"
+                           type="file"
+                           property="composite.content.present"/>
+                <available file="${project.build.directory}/updatesite/compositeArtifacts.jar"
+                           type="file"
+                           property="composite.artifacts.present"/>
+                <available file="${project.build.directory}/director-install.log"
+                           type="file"
+                           property="director.install.log.present"/>
+                <fail unless="composite.content.present"
+                      message="The Eclipse application did not generate compositeContent.jar."/>
+                <fail unless="composite.artifacts.present"
+                      message="The Eclipse application did not generate compositeArtifacts.jar."/>
+                <fail unless="director.install.log.present"
+                      message="The Eclipse application did not complete the director install verification."/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

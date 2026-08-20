@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Go to Project composite p2 repository" default="assemble-and-verify">
+  <target name="assemble-and-verify">
+    <fail unless="legacyRepository" message="-DlegacyRepository must point to the existing Go to Project Pages updatesite."/>
+    <fail unless="currentRepository" message="The current Tycho repository path was not provided."/>
+    <fail unless="outputRepository" message="The composite repository output path was not provided."/>
+    <fail unless="releaseVersion" message="-DreleaseVersion must be the unqualified release version."/>
+
+    <condition property="valid.release.version">
+      <matches string="${releaseVersion}" pattern="^[0-9]+\.[0-9]+\.[0-9]+$"/>
+    </condition>
+    <fail unless="valid.release.version" message="releaseVersion must have major.minor.micro form."/>
+
+    <available file="${legacyRepository}/content.jar" type="file" property="legacy.content.present"/>
+    <available file="${legacyRepository}/artifacts.jar" type="file" property="legacy.artifacts.present"/>
+    <available file="${currentRepository}/content.jar" type="file" property="current.content.present"/>
+    <available file="${currentRepository}/artifacts.jar" type="file" property="current.artifacts.present"/>
+    <fail unless="legacy.content.present" message="The legacy repository has no content.jar."/>
+    <fail unless="legacy.artifacts.present" message="The legacy repository has no artifacts.jar."/>
+    <fail unless="current.content.present" message="Run the normal reactor first; the current repository has no content.jar."/>
+    <fail unless="current.artifacts.present" message="Run the normal reactor first; the current repository has no artifacts.jar."/>
+
+    <resourcecount property="legacy.feature.count">
+      <fileset dir="${legacyRepository}/features" includes="dev.lonsing.eclipse.plugins.gotoproject.feature_*.jar"/>
+    </resourcecount>
+    <resourcecount property="legacy.plugin.count">
+      <fileset dir="${legacyRepository}/plugins" includes="dev.lonsing.eclipse.plugins.gotoproject_*.jar"/>
+    </resourcecount>
+    <resourcecount property="current.feature.count">
+      <fileset dir="${currentRepository}/features" includes="dev.lonsing.eclipse.plugins.gotoproject.feature_*.jar"/>
+    </resourcecount>
+    <resourcecount property="current.plugin.count">
+      <fileset dir="${currentRepository}/plugins" includes="dev.lonsing.eclipse.plugins.gotoproject_*.jar"/>
+    </resourcecount>
+    <condition property="legacy.counts.valid">
+      <and>
+        <equals arg1="${legacy.feature.count}" arg2="4"/>
+        <equals arg1="${legacy.plugin.count}" arg2="4"/>
+      </and>
+    </condition>
+    <condition property="current.counts.valid">
+      <and>
+        <equals arg1="${current.feature.count}" arg2="1"/>
+        <equals arg1="${current.plugin.count}" arg2="1"/>
+      </and>
+    </condition>
+    <fail unless="legacy.counts.valid" message="Expected exactly four historical Go to Project feature and plug-in JARs."/>
+    <fail unless="current.counts.valid" message="Expected exactly one current Go to Project feature and plug-in JAR."/>
+
+    <property name="verification.root" location="${outputRepository}/.."/>
+    <delete dir="${outputRepository}" quiet="true"/>
+    <mkdir dir="${outputRepository}/releases/1.x"/>
+    <mkdir dir="${outputRepository}/releases/${releaseVersion}"/>
+    <copy todir="${outputRepository}/releases/1.x" preservelastmodified="true">
+      <fileset dir="${legacyRepository}"/>
+    </copy>
+    <copy todir="${outputRepository}/releases/${releaseVersion}" preservelastmodified="true">
+      <fileset dir="${currentRepository}"/>
+    </copy>
+
+    <makeurl file="${outputRepository}" property="composite.repository.uri"/>
+    <p2.composite.repository destination="${composite.repository.uri}"
+                             failOnExists="true"
+                             validate="org.eclipse.equinox.p2.repository.tools.jar.comparator">
+      <add location="releases/1.x"/>
+      <add location="releases/${releaseVersion}"/>
+    </p2.composite.repository>
+    <echo file="${outputRepository}/p2.index">version=1
+metadata.repository.factory.order=compositeContent.xml
+artifact.repository.factory.order=compositeArtifacts.xml
+</echo>
+
+    <available file="${outputRepository}/compositeContent.jar" type="file" property="composite.content.present"/>
+    <available file="${outputRepository}/compositeArtifacts.jar" type="file" property="composite.artifacts.present"/>
+    <available file="${outputRepository}/p2.index" type="file" property="composite.index.present"/>
+    <fail unless="composite.content.present" message="Composite metadata was not generated."/>
+    <fail unless="composite.artifacts.present" message="Composite artifact metadata was not generated."/>
+    <fail unless="composite.index.present" message="Composite p2.index was not generated."/>
+
+    <record name="${verification.root}/director-list.log" action="start" loglevel="info" append="false"/>
+    <p2.director metadataRepository="${composite.repository.uri}"
+                 artifactRepository="${composite.repository.uri}"
+                 extraArguments="-followReferences"
+                 list="true"/>
+    <record name="${verification.root}/director-list.log" action="stop"/>
+    <loadfile property="composite.list.output" srcFile="${verification.root}/director-list.log"/>
+    <condition property="legacy.iu.listed">
+      <contains string="${composite.list.output}"
+                substring="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group=1.0.0.202003182309"/>
+    </condition>
+    <condition property="current.iu.listed">
+      <contains string="${composite.list.output}"
+                substring="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group=${releaseVersion}."/>
+    </condition>
+    <fail unless="legacy.iu.listed" message="The composite does not list the latest historical feature."/>
+    <fail unless="current.iu.listed" message="The composite does not list the current ${releaseVersion} feature."/>
+
+    <delete dir="${verification.root}/director-profile" quiet="true"/>
+    <delete dir="${verification.root}/director-bundle-pool" quiet="true"/>
+    <record name="${verification.root}/director-install.log" action="start" loglevel="info" append="false"/>
+    <p2.director metadataRepository="${composite.repository.uri}"
+                 artifactRepository="${composite.repository.uri}"
+                 destination="${verification.root}/director-profile"
+                 bundlePool="${verification.root}/director-bundle-pool"
+                 profile="Phase4GoToProject"
+                 roaming="true"
+                 extraArguments="-followReferences -profileProperties org.eclipse.update.install.features=true">
+      <iu id="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group"/>
+    </p2.director>
+    <record name="${verification.root}/director-install.log" action="stop"/>
+
+    <resourcecount property="installed.plugin.count">
+      <fileset dir="${verification.root}/director-bundle-pool/plugins"
+               includes="dev.lonsing.eclipse.plugins.gotoproject_${releaseVersion}.*.jar"/>
+    </resourcecount>
+    <condition property="installed.plugin.valid">
+      <equals arg1="${installed.plugin.count}" arg2="1"/>
+    </condition>
+    <fail unless="installed.plugin.valid" message="The clean director profile does not contain the current Go to Project bundle."/>
+  </target>
+</project>

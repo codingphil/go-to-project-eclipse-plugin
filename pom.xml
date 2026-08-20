@@ -104,4 +104,13 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>composite-repository</id>
+      <modules>
+        <module>releng/composite-repository</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
