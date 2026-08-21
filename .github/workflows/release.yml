@@ -1,0 +1,344 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag in strict vMAJOR.MINOR.MICRO form
+        required: true
+        type: string
+      publish:
+        description: Publish the verified artifact to gh-pages
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gotoproject-pages-production
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare and verify Pages artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.context.outputs.artifact_name }}
+      pages_base: ${{ steps.context.outputs.pages_base }}
+      publication: ${{ steps.context.outputs.publication }}
+      release_tag: ${{ steps.context.outputs.release_tag }}
+      release_version: ${{ steps.context.outputs.release_version }}
+      source_sha: ${{ steps.context.outputs.source_sha }}
+    steps:
+      - name: Check out exact source ref
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out current Pages baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: pages
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and strictly validate release context
+        id: context
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DISPATCH_RELEASE_TAG: ${{ inputs.release_tag }}
+          DISPATCH_PUBLISH: ${{ inputs.publish }}
+        run: |
+          $tag = if ($env:EVENT_NAME -eq 'push') { $env:REF_NAME } else { $env:DISPATCH_RELEASE_TAG }
+          if ($tag -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            throw "release_tag must have exact vMAJOR.MINOR.MICRO form without leading zeroes; received '$tag'."
+          }
+          $publication = $env:EVENT_NAME -eq 'push' -or $env:DISPATCH_PUBLISH -eq 'true'
+          $releaseVersion = $tag.Substring(1)
+          $sourceSha = (git -C source rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the source SHA.' }
+          $pagesBase = (git -C pages rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the Pages baseline.' }
+          $artifactName = "gotoproject-pages-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+          "release_version=$releaseVersion" >> $env:GITHUB_OUTPUT
+          "publication=$($publication.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "source_sha=$sourceSha" >> $env:GITHUB_OUTPUT
+          "pages_base=$pagesBase" >> $env:GITHUB_OUTPUT
+          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          "RELEASE_VERSION=$releaseVersion" >> $env:GITHUB_ENV
+          "PAGES_BASE=$pagesBase" >> $env:GITHUB_ENV
+          "RELEASE_ARTIFACT_NAME=$artifactName" >> $env:GITHUB_ENV
+
+          & ./source/releng/verify-release.ps1 `
+            -SourceRepository ./source `
+            -ReleaseTag $tag `
+            -Publication:$publication
+
+      - name: Set up Java 21
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: source/pom.xml
+
+      - name: Run full build, tests, and current-repository verification
+        shell: bash
+        working-directory: source
+        run: |
+          chmod +x mvnw
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            ./mvnw --batch-mode --no-transfer-progress clean verify
+
+      - name: Verify generated versions and unsigned artifacts
+        shell: pwsh
+        run: |
+          & ./source/releng/verify-release.ps1 `
+            -SourceRepository ./source `
+            -ReleaseTag $env:RELEASE_TAG `
+            -GeneratedRepository ./source/repository/target/repository
+
+      - name: Preserve the exact Pages input
+        shell: pwsh
+        run: |
+          $inputPath = Join-Path $env:RUNNER_TEMP 'pages-input'
+          if (Test-Path -LiteralPath $inputPath) {
+            throw "Unexpected pre-existing runner path '$inputPath'."
+          }
+          Copy-Item -LiteralPath ./pages/updatesite -Destination $inputPath -Recurse -Force
+          "PAGES_INPUT=$inputPath" >> $env:GITHUB_ENV
+          "COMPOSITE_EVIDENCE=$(Join-Path $env:RUNNER_TEMP 'composite-evidence')" >> $env:GITHUB_ENV
+
+      - name: Assemble directly into the staged Pages updatesite and director-verify it
+        shell: bash
+        working-directory: source
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            ./mvnw --batch-mode --no-transfer-progress \
+              -Pcomposite-repository \
+              -pl releng/composite-repository \
+              "-DlegacyRepository=$PAGES_INPUT" \
+              "-DreleaseVersion=$RELEASE_VERSION" \
+              "-DoutputRepository=$GITHUB_WORKSPACE/pages/updatesite" \
+              "-DverificationRoot=$COMPOSITE_EVIDENCE" \
+              verify
+
+      - name: Validate staged Pages tree and write deterministic evidence
+        shell: pwsh
+        run: |
+          $evidence = Join-Path $env:RUNNER_TEMP 'release-evidence'
+          New-Item -ItemType Directory -Path $evidence | Out-Null
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [System.IO.File]::WriteAllText((Join-Path $evidence 'release-tag.txt'), "$env:RELEASE_TAG`n", $utf8)
+          [System.IO.File]::WriteAllText((Join-Path $evidence 'source-sha.txt'), "${{ steps.context.outputs.source_sha }}`n", $utf8)
+          [System.IO.File]::WriteAllText((Join-Path $evidence 'pages-base.txt'), "$env:PAGES_BASE`n", $utf8)
+          Copy-Item -LiteralPath (Join-Path $env:COMPOSITE_EVIDENCE 'director-list.log') -Destination $evidence
+          Copy-Item -LiteralPath (Join-Path $env:COMPOSITE_EVIDENCE 'director-install.log') -Destination $evidence
+
+          & ./source/releng/verify-pages.ps1 `
+            -PagesRepository ./pages `
+            -ExpectedBaseHead $env:PAGES_BASE `
+            -ReleaseTag $env:RELEASE_TAG `
+            -WriteHashManifest (Join-Path $evidence 'updatesite.sha256')
+          "RELEASE_EVIDENCE=$evidence" >> $env:GITHUB_ENV
+
+      - name: Rehearse the GitHub Pages Jekyll build
+        uses: actions/jekyll-build-pages@44a6e6beabd48582f863aeeb6cb2151cc1716697 # v1.0.13
+        with:
+          source: ./pages
+          destination: ./jekyll-site
+
+      - name: Prove Jekyll preserved the complete non-dot p2 payload
+        shell: pwsh
+        run: |
+          & ./source/releng/verify-pages.ps1 `
+            -PagesRepository ./pages `
+            -ExpectedBaseHead $env:PAGES_BASE `
+            -ReleaseTag $env:RELEASE_TAG `
+            -CompareHashManifest (Join-Path $env:RELEASE_EVIDENCE 'updatesite.sha256') `
+            -PublishedSiteRoot ./jekyll-site
+
+      - name: Tar the exact staged updatesite and evidence
+        shell: pwsh
+        run: |
+          $bundleRoot = Join-Path $env:RUNNER_TEMP 'release-bundle'
+          New-Item -ItemType Directory -Path $bundleRoot | Out-Null
+          Copy-Item -LiteralPath ./pages/updatesite -Destination (Join-Path $bundleRoot 'updatesite') -Recurse -Force
+          Copy-Item -LiteralPath $env:RELEASE_EVIDENCE -Destination (Join-Path $bundleRoot 'evidence') -Recurse -Force
+          $archive = Join-Path $env:RUNNER_TEMP "$env:RELEASE_ARTIFACT_NAME.tar.gz"
+          & tar -czf $archive -C $bundleRoot updatesite evidence
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the release artifact.' }
+          "RELEASE_ARCHIVE=$archive" >> $env:GITHUB_ENV
+
+      - name: Upload the exact release artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.context.outputs.artifact_name }}
+          path: ${{ env.RELEASE_ARCHIVE }}
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish verified artifact
+    needs: prepare
+    if: ${{ github.event_name == 'push' || inputs.publish == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: pages-production
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - name: Download the exact prepared artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.prepare.outputs.artifact_name }}
+          path: artifact
+
+      - name: Check out the exact prepared source SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out the current Pages branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: pages
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Revalidate immutable source publication context
+        shell: pwsh
+        run: |
+          & ./source/releng/verify-release.ps1 `
+            -SourceRepository ./source `
+            -ReleaseTag '${{ needs.prepare.outputs.release_tag }}' `
+            -Publication
+
+      - name: Refuse a moved Pages baseline and restore only updatesite
+        shell: pwsh
+        run: |
+          $expectedBase = '${{ needs.prepare.outputs.pages_base }}'
+          $actualBase = (git -C pages rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actualBase -ne $expectedBase) {
+            throw "Pages baseline moved after preparation. Expected '$expectedBase'; found '$actualBase'."
+          }
+
+          $archive = Join-Path ./artifact '${{ needs.prepare.outputs.artifact_name }}.tar.gz'
+          $restoreRoot = Join-Path $env:RUNNER_TEMP 'prepared-release'
+          New-Item -ItemType Directory -Path $restoreRoot | Out-Null
+          & tar -xzf $archive -C $restoreRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Could not extract the prepared release artifact.' }
+
+          $expectedEvidence = @{
+            'release-tag.txt' = '${{ needs.prepare.outputs.release_tag }}'
+            'source-sha.txt' = '${{ needs.prepare.outputs.source_sha }}'
+            'pages-base.txt' = '${{ needs.prepare.outputs.pages_base }}'
+          }
+          foreach ($entry in $expectedEvidence.GetEnumerator()) {
+            $actual = (Get-Content -LiteralPath (Join-Path (Join-Path $restoreRoot 'evidence') $entry.Key) -Raw).Trim()
+            if ($actual -ne $entry.Value) {
+              throw "Prepared evidence '$($entry.Key)' does not match the prepare job output."
+            }
+          }
+
+          $updatesitePath = Join-Path (Resolve-Path ./pages).Path 'updatesite'
+          if (-not $updatesitePath.StartsWith((Resolve-Path ./pages).Path + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::Ordinal)) {
+            throw 'Refusing to replace an updatesite outside the Pages checkout.'
+          }
+          Remove-Item -LiteralPath $updatesitePath -Recurse -Force
+          Copy-Item -LiteralPath (Join-Path $restoreRoot 'updatesite') -Destination $updatesitePath -Recurse -Force
+          "RESTORE_ROOT=$restoreRoot" >> $env:GITHUB_ENV
+
+      - name: Revalidate hashes and the Pages path allowlist
+        shell: pwsh
+        run: |
+          & ./source/releng/verify-pages.ps1 `
+            -PagesRepository ./pages `
+            -ExpectedBaseHead '${{ needs.prepare.outputs.pages_base }}' `
+            -ReleaseTag '${{ needs.prepare.outputs.release_tag }}' `
+            -CompareHashManifest (Join-Path (Join-Path $env:RESTORE_ROOT 'evidence') 'updatesite.sha256')
+
+      - name: Commit the one-subtree publication
+        shell: pwsh
+        run: |
+          git -C pages config user.name 'github-actions[bot]'
+          git -C pages config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C pages add -- updatesite
+          git -C pages diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { throw 'Prepared release produces no Pages change.' }
+          if ($LASTEXITCODE -ne 1) { throw 'Could not inspect the staged Pages change.' }
+          git -C pages commit -m "Publish ${{ needs.prepare.outputs.release_tag }}"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the Pages publication commit.' }
+
+      - name: Recheck the remote baseline and push without force
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $expectedBase = '${{ needs.prepare.outputs.pages_base }}'
+          $basicCredential = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$env:GH_TOKEN"))
+          $authHeader = "AUTHORIZATION: basic $basicCredential"
+          $remoteLine = @(git -C pages -c "http.https://github.com/.extraheader=$authHeader" ls-remote origin refs/heads/gh-pages)
+          if ($LASTEXITCODE -ne 0 -or $remoteLine.Count -ne 1) {
+            throw 'Could not resolve the remote gh-pages baseline.'
+          }
+          $remoteBase = ($remoteLine[0] -split '\s+')[0]
+          if ($remoteBase -ne $expectedBase) {
+            throw "Remote gh-pages moved after preparation. Expected '$expectedBase'; found '$remoteBase'."
+          }
+          git -C pages -c "http.https://github.com/.extraheader=$authHeader" push origin HEAD:refs/heads/gh-pages
+          if ($LASTEXITCODE -ne 0) { throw 'The non-force Pages push failed.' }
+
+      - name: Request and verify the exact GitHub Pages build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $publishedSha = (git -C pages rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the publication commit.' }
+          $headers = @{
+            Accept = 'application/vnd.github+json'
+            Authorization = "Bearer $env:GH_TOKEN"
+            'X-GitHub-Api-Version' = '2026-03-10'
+          }
+          $buildsUrl = "https://api.github.com/repos/${{ github.repository }}/pages/builds"
+          $request = Invoke-RestMethod -Method Post -Uri $buildsUrl -Headers $headers
+          if ($request.status -notin @('queued', 'building')) {
+            throw "GitHub did not queue the Pages build; received status '$($request.status)'."
+          }
+
+          for ($attempt = 1; $attempt -le 60; $attempt++) {
+            Start-Sleep -Seconds 10
+            $build = Invoke-RestMethod -Method Get -Uri "$buildsUrl/latest" -Headers $headers
+            if ($build.commit -ne $publishedSha) { continue }
+            if ($build.status -eq 'built') {
+              Write-Host "GitHub Pages built publication commit $publishedSha."
+              exit 0
+            }
+            if ($build.status -eq 'errored') {
+              $message = if ($null -ne $build.error) { $build.error.message } else { 'unknown error' }
+              throw "GitHub Pages failed to build $publishedSha`: $message"
+            }
+          }
+          throw "Timed out waiting for GitHub Pages to build publication commit $publishedSha."

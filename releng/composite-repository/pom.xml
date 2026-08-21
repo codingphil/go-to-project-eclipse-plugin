@@ -16,6 +16,12 @@
 
   <name>Go to Project - Composite p2 Repository</name>
 
+  <properties>
+    <currentRepository>${project.basedir}/../../repository/target/repository</currentRepository>
+    <outputRepository>${project.build.directory}/updatesite</outputRepository>
+    <verificationRoot>${project.build.directory}</verificationRoot>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -107,8 +113,9 @@
                 <arg>-buildfile</arg>
                 <arg>${project.basedir}/composite.xml</arg>
                 <arg>-DlegacyRepository=${legacyRepository}</arg>
-                <arg>-DcurrentRepository=${project.basedir}/../../repository/target/repository</arg>
-                <arg>-DoutputRepository=${project.build.directory}/updatesite</arg>
+                <arg>-DcurrentRepository=${currentRepository}</arg>
+                <arg>-DoutputRepository=${outputRepository}</arg>
+                <arg>-DverificationRoot=${verificationRoot}</arg>
                 <arg>-DreleaseVersion=${releaseVersion}</arg>
               </applicationArgs>
             </configuration>
@@ -128,13 +135,13 @@
             </goals>
             <configuration>
               <target>
-                <available file="${project.build.directory}/updatesite/compositeContent.jar"
+                <available file="${outputRepository}/compositeContent.jar"
                            type="file"
                            property="composite.content.present"/>
-                <available file="${project.build.directory}/updatesite/compositeArtifacts.jar"
+                <available file="${outputRepository}/compositeArtifacts.jar"
                            type="file"
                            property="composite.artifacts.present"/>
-                <available file="${project.build.directory}/director-install.log"
+                <available file="${verificationRoot}/director-install.log"
                            type="file"
                            property="director.install.log.present"/>
                 <fail unless="composite.content.present"

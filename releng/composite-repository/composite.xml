@@ -1,36 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="Go to Project composite p2 repository" default="assemble-and-verify">
-  <target name="assemble-and-verify">
+  <target name="validate-inputs">
     <fail unless="legacyRepository" message="-DlegacyRepository must point to the existing Go to Project Pages updatesite."/>
     <fail unless="currentRepository" message="The current Tycho repository path was not provided."/>
     <fail unless="outputRepository" message="The composite repository output path was not provided."/>
+    <fail unless="verificationRoot" message="The director verification root path was not provided."/>
     <fail unless="releaseVersion" message="-DreleaseVersion must be the unqualified release version."/>
 
     <condition property="valid.release.version">
-      <matches string="${releaseVersion}" pattern="^[0-9]+\.[0-9]+\.[0-9]+$"/>
+      <matches string="${releaseVersion}" pattern="^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"/>
     </condition>
-    <fail unless="valid.release.version" message="releaseVersion must have major.minor.micro form."/>
+    <fail unless="valid.release.version" message="releaseVersion must have strict major.minor.micro form without leading zeroes."/>
 
-    <available file="${legacyRepository}/content.jar" type="file" property="legacy.content.present"/>
-    <available file="${legacyRepository}/artifacts.jar" type="file" property="legacy.artifacts.present"/>
-    <available file="${currentRepository}/content.jar" type="file" property="current.content.present"/>
-    <available file="${currentRepository}/artifacts.jar" type="file" property="current.artifacts.present"/>
-    <fail unless="legacy.content.present" message="The legacy repository has no content.jar."/>
-    <fail unless="legacy.artifacts.present" message="The legacy repository has no artifacts.jar."/>
+    <property name="input.repository.path" location="${legacyRepository}"/>
+    <property name="current.repository.path" location="${currentRepository}"/>
+    <property name="output.repository.path" location="${outputRepository}"/>
+    <property name="verification.root.path" location="${verificationRoot}"/>
+    <condition property="input.output.same">
+      <equals arg1="${input.repository.path}" arg2="${output.repository.path}" forceString="true"/>
+    </condition>
+    <fail if="input.output.same" message="legacyRepository and outputRepository must be different paths; copy the Pages input before assembly."/>
+
+    <available file="${input.repository.path}/content.jar" type="file" property="input.simple.content.present"/>
+    <available file="${input.repository.path}/artifacts.jar" type="file" property="input.simple.artifacts.present"/>
+    <available file="${input.repository.path}/compositeContent.jar" type="file" property="input.composite.content.present"/>
+    <available file="${input.repository.path}/compositeArtifacts.jar" type="file" property="input.composite.artifacts.present"/>
+    <condition property="input.is.flat">
+      <and>
+        <isset property="input.simple.content.present"/>
+        <isset property="input.simple.artifacts.present"/>
+        <not><isset property="input.composite.content.present"/></not>
+        <not><isset property="input.composite.artifacts.present"/></not>
+      </and>
+    </condition>
+    <condition property="input.is.composite">
+      <and>
+        <isset property="input.composite.content.present"/>
+        <isset property="input.composite.artifacts.present"/>
+        <not><isset property="input.simple.content.present"/></not>
+        <not><isset property="input.simple.artifacts.present"/></not>
+      </and>
+    </condition>
+    <condition property="input.layout.valid">
+      <xor>
+        <isset property="input.is.flat"/>
+        <isset property="input.is.composite"/>
+      </xor>
+    </condition>
+    <fail unless="input.layout.valid"
+          message="legacyRepository must be either a flat content.jar/artifacts.jar repository or an existing compositeContent.jar/compositeArtifacts.jar repository, not a mixture."/>
+
+    <available file="${current.repository.path}/content.jar" type="file" property="current.content.present"/>
+    <available file="${current.repository.path}/artifacts.jar" type="file" property="current.artifacts.present"/>
+    <available file="${current.repository.path}/p2.index" type="file" property="current.index.present"/>
     <fail unless="current.content.present" message="Run the normal reactor first; the current repository has no content.jar."/>
     <fail unless="current.artifacts.present" message="Run the normal reactor first; the current repository has no artifacts.jar."/>
+    <fail unless="current.index.present" message="Run the normal reactor first; the current repository has no p2.index."/>
 
-    <resourcecount property="legacy.feature.count">
-      <fileset dir="${legacyRepository}/features" includes="dev.lonsing.eclipse.plugins.gotoproject.feature_*.jar"/>
-    </resourcecount>
-    <resourcecount property="legacy.plugin.count">
-      <fileset dir="${legacyRepository}/plugins" includes="dev.lonsing.eclipse.plugins.gotoproject_*.jar"/>
-    </resourcecount>
     <resourcecount property="current.feature.count">
-      <fileset dir="${currentRepository}/features" includes="dev.lonsing.eclipse.plugins.gotoproject.feature_*.jar"/>
+      <fileset dir="${current.repository.path}/features"
+               includes="dev.lonsing.eclipse.plugins.gotoproject.feature_${releaseVersion}.*.jar"/>
     </resourcecount>
     <resourcecount property="current.plugin.count">
-      <fileset dir="${currentRepository}/plugins" includes="dev.lonsing.eclipse.plugins.gotoproject_*.jar"/>
+      <fileset dir="${current.repository.path}/plugins"
+               includes="dev.lonsing.eclipse.plugins.gotoproject_${releaseVersion}.*.jar"/>
+    </resourcecount>
+    <condition property="current.counts.valid">
+      <and>
+        <equals arg1="${current.feature.count}" arg2="1"/>
+        <equals arg1="${current.plugin.count}" arg2="1"/>
+      </and>
+    </condition>
+    <fail unless="current.counts.valid"
+          message="Expected exactly one current ${releaseVersion} Go to Project feature and plug-in JAR."/>
+
+    <available file="${input.repository.path}/releases/${releaseVersion}"
+               type="dir"
+               property="duplicate.release.directory"/>
+    <fail if="duplicate.release.directory"
+          message="Release ${releaseVersion} already exists in the input repository; output was not deleted."/>
+  </target>
+
+  <target name="preflight-flat" depends="validate-inputs" if="input.is.flat">
+    <resourcecount property="legacy.feature.count">
+      <fileset dir="${input.repository.path}/features"
+               includes="dev.lonsing.eclipse.plugins.gotoproject.feature_*.jar"/>
+    </resourcecount>
+    <resourcecount property="legacy.plugin.count">
+      <fileset dir="${input.repository.path}/plugins"
+               includes="dev.lonsing.eclipse.plugins.gotoproject_*.jar"/>
     </resourcecount>
     <condition property="legacy.counts.valid">
       <and>
@@ -38,52 +96,106 @@
         <equals arg1="${legacy.plugin.count}" arg2="4"/>
       </and>
     </condition>
-    <condition property="current.counts.valid">
+    <fail unless="legacy.counts.valid"
+          message="Expected exactly four historical Go to Project feature and plug-in JARs in the flat legacy repository."/>
+  </target>
+
+  <target name="preflight-composite" depends="validate-inputs" if="input.is.composite">
+    <loadresource property="existing.composite.content">
+      <zipentry zipfile="${input.repository.path}/compositeContent.jar" name="compositeContent.xml"/>
+    </loadresource>
+    <loadresource property="existing.composite.artifacts">
+      <zipentry zipfile="${input.repository.path}/compositeArtifacts.jar" name="compositeArtifacts.xml"/>
+    </loadresource>
+    <condition property="duplicate.release.metadata">
+      <or>
+        <contains string="${existing.composite.content}" substring="releases/${releaseVersion}"/>
+        <contains string="${existing.composite.artifacts}" substring="releases/${releaseVersion}"/>
+      </or>
+    </condition>
+    <fail if="duplicate.release.metadata"
+          message="Release ${releaseVersion} already exists in composite metadata; output was not deleted."/>
+    <condition property="legacy.child.retained">
       <and>
-        <equals arg1="${current.feature.count}" arg2="1"/>
-        <equals arg1="${current.plugin.count}" arg2="1"/>
+        <contains string="${existing.composite.content}" substring="releases/1.x"/>
+        <contains string="${existing.composite.artifacts}" substring="releases/1.x"/>
       </and>
     </condition>
-    <fail unless="legacy.counts.valid" message="Expected exactly four historical Go to Project feature and plug-in JARs."/>
-    <fail unless="current.counts.valid" message="Expected exactly one current Go to Project feature and plug-in JAR."/>
+    <fail unless="legacy.child.retained" message="The existing composite does not retain releases/1.x in both metadata repositories."/>
+  </target>
 
-    <property name="verification.root" location="${outputRepository}/.."/>
-    <delete dir="${outputRepository}" quiet="true"/>
-    <mkdir dir="${outputRepository}/releases/1.x"/>
-    <mkdir dir="${outputRepository}/releases/${releaseVersion}"/>
-    <copy todir="${outputRepository}/releases/1.x" preservelastmodified="true">
-      <fileset dir="${legacyRepository}"/>
-    </copy>
-    <copy todir="${outputRepository}/releases/${releaseVersion}" preservelastmodified="true">
-      <fileset dir="${currentRepository}"/>
-    </copy>
+  <target name="clean-output" depends="preflight-flat,preflight-composite">
+    <delete dir="${output.repository.path}" quiet="true"/>
+    <mkdir dir="${output.repository.path}"/>
+  </target>
 
-    <makeurl file="${outputRepository}" property="composite.repository.uri"/>
+  <target name="prepare-flat" depends="clean-output" if="input.is.flat">
+    <mkdir dir="${output.repository.path}/releases/1.x"/>
+    <copy todir="${output.repository.path}/releases/1.x" preservelastmodified="true">
+      <fileset dir="${input.repository.path}"/>
+    </copy>
+  </target>
+
+  <target name="prepare-composite" depends="clean-output" if="input.is.composite">
+    <copy todir="${output.repository.path}" preservelastmodified="true">
+      <fileset dir="${input.repository.path}"/>
+    </copy>
+  </target>
+
+  <target name="copy-current" depends="prepare-flat,prepare-composite">
+    <mkdir dir="${output.repository.path}/releases/${releaseVersion}"/>
+    <copy todir="${output.repository.path}/releases/${releaseVersion}" preservelastmodified="true">
+      <fileset dir="${current.repository.path}"/>
+    </copy>
+    <makeurl file="${output.repository.path}" property="composite.repository.uri"/>
+  </target>
+
+  <target name="create-flat-composite" depends="copy-current" if="input.is.flat">
     <p2.composite.repository destination="${composite.repository.uri}"
                              failOnExists="true"
                              validate="org.eclipse.equinox.p2.repository.tools.jar.comparator">
       <add location="releases/1.x"/>
       <add location="releases/${releaseVersion}"/>
     </p2.composite.repository>
-    <echo file="${outputRepository}/p2.index">version=1
+  </target>
+
+  <target name="extend-existing-composite" depends="copy-current" if="input.is.composite">
+    <p2.composite.repository destination="${composite.repository.uri}"
+                             failOnExists="false"
+                             validate="org.eclipse.equinox.p2.repository.tools.jar.comparator">
+      <add location="releases/${releaseVersion}"/>
+    </p2.composite.repository>
+  </target>
+
+  <target name="verify-output" depends="create-flat-composite,extend-existing-composite">
+    <echo file="${output.repository.path}/p2.index">version=1
 metadata.repository.factory.order=compositeContent.xml
 artifact.repository.factory.order=compositeArtifacts.xml
 </echo>
 
-    <available file="${outputRepository}/compositeContent.jar" type="file" property="composite.content.present"/>
-    <available file="${outputRepository}/compositeArtifacts.jar" type="file" property="composite.artifacts.present"/>
-    <available file="${outputRepository}/p2.index" type="file" property="composite.index.present"/>
+    <available file="${output.repository.path}/compositeContent.jar" type="file" property="composite.content.present"/>
+    <available file="${output.repository.path}/compositeArtifacts.jar" type="file" property="composite.artifacts.present"/>
+    <available file="${output.repository.path}/p2.index" type="file" property="composite.index.present"/>
+    <available file="${output.repository.path}/releases/1.x/content.jar" type="file" property="legacy.child.content.present"/>
+    <available file="${output.repository.path}/releases/1.x/artifacts.jar" type="file" property="legacy.child.artifacts.present"/>
+    <available file="${output.repository.path}/releases/${releaseVersion}/content.jar" type="file" property="current.child.content.present"/>
+    <available file="${output.repository.path}/releases/${releaseVersion}/artifacts.jar" type="file" property="current.child.artifacts.present"/>
     <fail unless="composite.content.present" message="Composite metadata was not generated."/>
     <fail unless="composite.artifacts.present" message="Composite artifact metadata was not generated."/>
     <fail unless="composite.index.present" message="Composite p2.index was not generated."/>
+    <fail unless="legacy.child.content.present" message="The historical releases/1.x metadata was not preserved."/>
+    <fail unless="legacy.child.artifacts.present" message="The historical releases/1.x artifacts were not preserved."/>
+    <fail unless="current.child.content.present" message="The current release metadata was not copied."/>
+    <fail unless="current.child.artifacts.present" message="The current release artifacts were not copied."/>
 
-    <record name="${verification.root}/director-list.log" action="start" loglevel="info" append="false"/>
+    <mkdir dir="${verification.root.path}"/>
+    <record name="${verification.root.path}/director-list.log" action="start" loglevel="info" append="false"/>
     <p2.director metadataRepository="${composite.repository.uri}"
                  artifactRepository="${composite.repository.uri}"
                  extraArguments="-followReferences"
                  list="true"/>
-    <record name="${verification.root}/director-list.log" action="stop"/>
-    <loadfile property="composite.list.output" srcFile="${verification.root}/director-list.log"/>
+    <record name="${verification.root.path}/director-list.log" action="stop"/>
+    <loadfile property="composite.list.output" srcFile="${verification.root.path}/director-list.log"/>
     <condition property="legacy.iu.listed">
       <contains string="${composite.list.output}"
                 substring="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group=1.0.0.202003182309"/>
@@ -92,30 +204,33 @@ artifact.repository.factory.order=compositeArtifacts.xml
       <contains string="${composite.list.output}"
                 substring="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group=${releaseVersion}."/>
     </condition>
-    <fail unless="legacy.iu.listed" message="The composite does not list the latest historical feature."/>
-    <fail unless="current.iu.listed" message="The composite does not list the current ${releaseVersion} feature."/>
+    <fail unless="legacy.iu.listed" message="The exact output composite does not list the latest historical feature."/>
+    <fail unless="current.iu.listed" message="The exact output composite does not list the current ${releaseVersion} feature."/>
 
-    <delete dir="${verification.root}/director-profile" quiet="true"/>
-    <delete dir="${verification.root}/director-bundle-pool" quiet="true"/>
-    <record name="${verification.root}/director-install.log" action="start" loglevel="info" append="false"/>
+    <delete dir="${verification.root.path}/director-profile" quiet="true"/>
+    <delete dir="${verification.root.path}/director-bundle-pool" quiet="true"/>
+    <record name="${verification.root.path}/director-install.log" action="start" loglevel="info" append="false"/>
     <p2.director metadataRepository="${composite.repository.uri}"
                  artifactRepository="${composite.repository.uri}"
-                 destination="${verification.root}/director-profile"
-                 bundlePool="${verification.root}/director-bundle-pool"
-                 profile="Phase4GoToProject"
+                 destination="${verification.root.path}/director-profile"
+                 bundlePool="${verification.root.path}/director-bundle-pool"
+                 profile="ReleaseGoToProject"
                  roaming="true"
                  extraArguments="-followReferences -profileProperties org.eclipse.update.install.features=true">
       <iu id="dev.lonsing.eclipse.plugins.gotoproject.feature.feature.group"/>
     </p2.director>
-    <record name="${verification.root}/director-install.log" action="stop"/>
+    <record name="${verification.root.path}/director-install.log" action="stop"/>
 
     <resourcecount property="installed.plugin.count">
-      <fileset dir="${verification.root}/director-bundle-pool/plugins"
+      <fileset dir="${verification.root.path}/director-bundle-pool/plugins"
                includes="dev.lonsing.eclipse.plugins.gotoproject_${releaseVersion}.*.jar"/>
     </resourcecount>
     <condition property="installed.plugin.valid">
       <equals arg1="${installed.plugin.count}" arg2="1"/>
     </condition>
-    <fail unless="installed.plugin.valid" message="The clean director profile does not contain the current Go to Project bundle."/>
+    <fail unless="installed.plugin.valid"
+          message="The clean director profile installed from the exact output does not contain the current Go to Project bundle."/>
   </target>
+
+  <target name="assemble-and-verify" depends="verify-output"/>
 </project>
