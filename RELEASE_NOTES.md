@@ -22,4 +22,14 @@ The 2.0.0 feature and plug-in JARs are intentionally unsigned. Eclipse 2026-06 i
 
 ## Release status
 
-The 2.0.0 source and release automation are prepared, but the immutable `v2.0.0` tag and public artifact verification are release-time gates. Source tag, Pages publication commit, workflow run, qualified artifact versions, checksums, and fresh-install/update smoke-test evidence will be recorded here after publication and verification.
+Go to Project 2.0.0 was published and verified on 2026-08-21:
+
+- Source tag: annotated `v2.0.0`, peeling to source commit `30fa8da28e0f010264e3a971f1036f8af4bb408f`
+- Release workflow: run `32495902889`, artifact `9451656054`
+- Pages publication commit: `b325a7c3016f95641d105ec863963870c2fecc82`
+- Qualified feature and bundle version: `2.0.0.202608192230`
+- Feature SHA-256: `418d8b21ddd05d9c1d0eb0ce244e66b7da5e6c025b05b44a766dd059e7b71565`
+- Plug-in SHA-256: `bee8d10882045102721bc0e48ed7e3fcbc181c8f0deff2b5d796167ba395fa12`
+- Release artifact ZIP SHA-256: `6f215b8f5dbdbf6a264c25da190290da03e5d8331a6d40edfad78baad98cdd0a`
+
+Fresh installation and update from the published 1.x feature were tested in isolated, unmodified Eclipse IDE for Java Developers 2026-06 profiles. The staged candidate, exact tag artifact, unchanged public update URL, both explorer views, the no-explorer state, closed projects, restart persistence, and the expected unsigned-content trust flow all passed without an unexpected Error Log entry. All 21 non-dot files served by GitHub Pages returned HTTP 200 with the recorded release hashes; the public repository exposes the retained 1.x versions and `2.0.0.202608192230`.
