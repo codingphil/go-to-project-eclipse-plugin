@@ -1,5 +1,15 @@
-# "Go to Project" Eclipse Plugin
-Eclipse plugin which allows the user to navigate to a specific project in the project view or the package explorer.
+# Go to Project Eclipse Plug-in
 
-Eclipse Update Site:
+Go to Project quickly selects a workspace project in Project Explorer or Package Explorer. Closed projects remain searchable and are opened when selected.
+
+## Eclipse update site
+
 <https://codingphil.github.io/go-to-project-eclipse-plugin/updatesite>
+
+The historical unsigned 1.x artifacts remain available at this URL so existing installations can update in place when a compatible newer release is published.
+
+## Go to Project 2.0.0
+
+Version 2.0.0 requires Eclipse IDE 2026-06 (Platform 4.40), or a compatible later Eclipse 4.x release, and Java 21. It includes null-safe handling for uninitialized explorers, deterministic project selection and focus, and safe handling of closed projects.
+
+The 2.0.0 feature and plug-in JARs will be published unsigned. Eclipse 2026-06 is therefore expected to show a trust prompt for unsigned content during installation or update; review and accept that prompt to continue.
