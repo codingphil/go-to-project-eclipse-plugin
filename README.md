@@ -26,7 +26,11 @@ See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the complete release summary and re
 
 ## Development
 
-The current development version is `2.0.0.qualifier`. Build and verify it with Java 21:
+See [DEVELOPMENT.md](DEVELOPMENT.md) for Eclipse workspace setup, target-platform
+configuration, builds, tests, and troubleshooting.
+
+The current development version is `2.0.0.qualifier`. Build and verify it with
+Java 21:
 
 ```powershell
 .\mvnw.cmd clean verify
