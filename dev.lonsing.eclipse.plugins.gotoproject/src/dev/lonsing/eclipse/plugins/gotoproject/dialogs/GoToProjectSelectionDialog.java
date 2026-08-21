@@ -50,6 +50,7 @@ public class GoToProjectSelectionDialog extends FilteredItemsSelectionDialog {
     super(shell, false);
     this.setTitle(Messages.GoToProjectSelectionDialog_SelectProjectDialogTitle);
     this.setMessage(Messages.GoToProjectSelectionDialog_SelectProjectDialogMessage);
+    this.setImage(GoToProjectPlugin.getDefault().getImageRegistry().get(GoToProjectPlugin.IMAGE_GO_TO_PROJECT));
     this.setListLabelProvider(new WorkbenchLabelProvider());
     this.setDetailsLabelProvider(new WorkbenchLabelProvider());
     allProjects = new ArrayList<>(projects);

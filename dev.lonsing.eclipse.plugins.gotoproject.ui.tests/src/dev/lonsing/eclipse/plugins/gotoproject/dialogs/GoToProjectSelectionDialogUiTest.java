@@ -20,6 +20,7 @@ import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -29,6 +30,8 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import dev.lonsing.eclipse.plugins.gotoproject.GoToProjectPlugin;
 
 class GoToProjectSelectionDialogUiTest {
   private static final int POLL_INTERVAL_MILLIS = 25;
@@ -40,6 +43,28 @@ class GoToProjectSelectionDialogUiTest {
     for (IProject project : fixtureProjects.reversed()) {
       if (project.exists()) {
         project.delete(true, true, null);
+      }
+    }
+  }
+
+  @Test
+  void usesGoToProjectIcon() {
+    Display display = Display.getCurrent();
+    assertNotNull(display, "Tycho must run UI tests on the SWT UI thread");
+
+    Shell parent = new Shell(display);
+    TestDialog dialog = new TestDialog(parent, List.of());
+    try {
+      dialog.create();
+      Image image = GoToProjectPlugin.getDefault().getImageRegistry().get(GoToProjectPlugin.IMAGE_GO_TO_PROJECT);
+
+      assertNotNull(image);
+      assertFalse(image.isDisposed());
+      assertSame(image, dialog.getShell().getImage());
+    } finally {
+      dialog.close();
+      if (!parent.isDisposed()) {
+        parent.dispose();
       }
     }
   }
