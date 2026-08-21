@@ -14,7 +14,15 @@ Use the unchanged Eclipse update-site URL:
 
 <https://codingphil.github.io/go-to-project-eclipse-plugin/updatesite>
 
-The public site currently contains the unsigned 1.x release. Eclipse may show an unsigned-content trust prompt. The signing policy for 2.0.0 will be documented before that release is published.
+The public site currently contains the unsigned 1.x release. Go to Project 2.0.0 will also be published unsigned. Eclipse 2026-06 is therefore expected to show a trust prompt for unsigned content during installation or update; review and accept that prompt to continue.
+
+## What is new in 2.0.0
+
+- Explorer handling is null-safe when Project Explorer or Package Explorer has not been created or is only partially initialized.
+- Project selection and focus are deterministic: visible explorers are updated when possible, the active explorer keeps focus, and Project Explorer is opened when neither explorer is visible.
+- Closed projects remain searchable and are opened when selected; cancellation or a failed open stops safely.
+
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the complete release summary and release-verification status.
 
 ## Development
 
