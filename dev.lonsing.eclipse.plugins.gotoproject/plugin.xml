@@ -34,6 +34,7 @@
             locationURI="menu:goTo?after=additions">
         <command
               commandId="dev.lonsing.eclipse.plugins.gotoproject.commands.gotoproject"
+              icon="icons/go-to-project.svg"
               id="dev.lonsing.eclipse.plugins.gotoproject.menus.gotoproject"
               mnemonic="P">
         </command>
