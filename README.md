@@ -24,6 +24,12 @@ The public site contains Go to Project 2.0.0 and retains the historical 1.x rele
 
 See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the complete release summary and release-verification status.
 
+## What is new in 2.0.1
+
+- New icon for Go to Project command
+
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for the complete release summary and release-verification status.
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for Eclipse workspace setup, target-platform
