@@ -2,7 +2,7 @@
 <feature
       id="dev.lonsing.eclipse.plugins.gotoproject.feature"
       label="Go to Project"
-      version="2.0.0.qualifier"
+      version="2.0.1.qualifier"
       provider-name="Philip Lonsing">
 
    <description url="https://codingphil.github.io/go-to-project-eclipse-plugin/">
